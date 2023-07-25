@@ -1,5 +1,6 @@
 import performance from "./performance";
 import requestmonitor from './requestmonitor'
+import ErrorMonitor from "./errormonitor";
 
 class MyMonitor{
   constructor(config){
@@ -20,7 +21,13 @@ class MyMonitor{
         console.log(data)
       }).init()
       //测试
-      test()
+      // test()
+    }
+
+    if(this.config.errorFlag){
+      new ErrorMonitor((data)=>{
+        console.log(data)
+      }).init()
     }
   }
 }
@@ -38,4 +45,4 @@ const test = ()=>{
 }
 
 
-new MyMonitor({performanceFlag:true,rquestFlag: true})
+new MyMonitor({performanceFlag:true,rquestFlag: true,errorFlag: true})

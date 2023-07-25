@@ -304,6 +304,15 @@
       }
     }, exports;
   }
+  function _typeof(obj) {
+    "@babel/helpers - typeof";
+
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) {
+      return typeof obj;
+    } : function (obj) {
+      return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    }, _typeof(obj);
+  }
   function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
     try {
       var info = gen[key](arg);
@@ -519,6 +528,149 @@
     return RequestMonitor;
   }();
 
+  var getLastEvent = function getLastEvent() {
+    ['click', 'touchstart', 'mousedown', 'keydown', 'mouseover'].forEach(function (eventType) {
+      document.addEventListener(eventType, function (event) {
+        // html5之前使用mouseEvent.path等获取事件位置，
+        // html5之后所有事件使用 PointerEven 替代，取消path
+      }, {
+        capture: true,
+        // 捕获阶段执行 防止事件丢失
+        passive: true // 默认不阻止默认事件
+      });
+    });
+  };
+
+  var getSelector = function getSelector(pathsOrTarget) {
+    if (Array.isArray(pathsOrTarget)) {
+      return getSelectors(pathsOrTarget);
+    } else {
+      var path = [];
+      while (pathsOrTarget) {
+        path.push(pathsOrTarget);
+        pathsOrTarget = pathsOrTarget.parentNode;
+      }
+      return getSelectors(path);
+    }
+  };
+  var getLines = function getLines(stack) {
+    return stack && stack.split('\n').slice(1).map(function (item) {
+      return item.replace(/^\s+at\s+/g, "");
+    }).join('^');
+  };
+  var getSelectors = function getSelectors(path) {
+    // 反转 + 过滤 + 映射 + 拼接
+    return path.reverse().filter(function (element) {
+      return element !== document && element !== window;
+    }).map(function (element) {
+      // console.log("element", element.nodeName);
+      var selector = "";
+      if (element.id) {
+        return "".concat(element.nodeName.toLowerCase(), "#").concat(element.id);
+      } else if (element.className && typeof element.className === "string") {
+        return "".concat(element.nodeName.toLowerCase(), ".").concat(element.className);
+      } else {
+        selector = element.nodeName.toLowerCase();
+      }
+      return selector;
+    }).join(" ");
+  };
+
+  var ErrorMonitor = /*#__PURE__*/function () {
+    function ErrorMonitor(cb) {
+      _classCallCheck(this, ErrorMonitor);
+      this.cb = cb;
+    }
+    _createClass(ErrorMonitor, [{
+      key: "init",
+      value: function init() {
+        var that = this;
+        that.resourceError();
+      }
+    }, {
+      key: "resourceError",
+      value: function resourceError() {
+        var that = this;
+        // 监听全局未捕获错误
+        window.addEventListener('error', function (event) {
+          var lastEvent = getLastEvent(); // 捕获最后一个交互事件（最新标准pointerEvent无法获取path)
+          if (event.target && (event.target.src || event.target.href)) {
+            // 资源加载错误
+            var errorLog = {
+              type: 'resourceError',
+              // 资源加载错误
+              filename: event.target.src || event.target.href,
+              // 报错文件
+              tagName: event.target.tagName,
+              // 标签名
+              selector: getSelector(event.target) // 代表最后一个操作的元素
+            };
+
+            that.cb(errorLog); // 上报日志
+          } else {
+            // js加载错误
+            var _errorLog = {
+              type: 'jsError',
+              // 小类型 error错误
+              message: event.message,
+              // 报错信息
+              filename: event.filename,
+              // 报错文件
+              position: "".concat(event.lineno, ":").concat(event.colno),
+              // 报错位置 行：列
+              stack: event.error && getLines(event.error.stack),
+              // 堆栈信息 哪个方法调用哪一块儿
+              selector: lastEvent ? getSelector(lastEvent.path) : "" // 代表最后一个操作的元素
+            };
+
+            that.cb(_errorLog); // 上报日志
+          }
+        }, true);
+
+        // 捕获promise reject错误
+        window.addEventListener('unhandledrejection', function (event) {
+          // console.log(event)
+          var lastEvent = getLastEvent(); // 获取到最后一个交互事件
+          var message;
+          var reason = event.reason;
+          var lineno = 0;
+          var colno = 0;
+          var filename;
+          var stack;
+          if (typeof event.reason === 'string') {
+            message = reason;
+          } else if (_typeof(reason) === 'object') {
+            if (reason.stack) {
+              var matchResult = reason.stack.match(/at\s+(.+):(\d+):(\d+)/);
+              filename = matchResult[1];
+              lineno = matchResult[2];
+              colno = matchResult[3];
+            }
+            message = reason.message;
+            stack = getLines(reason.stack);
+          }
+          // promise 报错
+          var errorLog = {
+            type: 'promiseError',
+            // pomise错误
+            message: message,
+            // 报错信息
+            filename: filename,
+            // 报错文件
+            position: "".concat(lineno, ":").concat(colno),
+            // 报错位置 行：列
+            stack: stack,
+            // 堆栈信息 哪个方法调用哪一块儿
+            selector: lastEvent ? getSelector(lastEvent.path) : "" // 最后一个操作的元素
+          };
+
+          that.cb(errorLog);
+        }, true);
+      }
+    }]);
+    return ErrorMonitor;
+  }();
+
   var MyMonitor = /*#__PURE__*/function () {
     function MyMonitor(config) {
       _classCallCheck(this, MyMonitor);
@@ -546,9 +698,15 @@
                     console.log(data);
                   }).init();
                   //测试
-                  test();
+                  // test()
                 }
-              case 3:
+
+                if (this.config.errorFlag) {
+                  new ErrorMonitor(function (data) {
+                    console.log(data);
+                  }).init();
+                }
+              case 4:
               case "end":
                 return _context.stop();
             }
@@ -562,18 +720,10 @@
     }]);
     return MyMonitor;
   }();
-  var test = function test() {
-    // 示例使用：
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://localhost:3000/data');
-    xhr.send();
-    fetch('http://localhost:3000/data').then(function (response) {
-      // 处理响应
-    });
-  };
   new MyMonitor({
     performanceFlag: true,
-    rquestFlag: true
+    rquestFlag: true,
+    errorFlag: true
   });
 
 }));

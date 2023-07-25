@@ -5,15 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>前端监控</title>
   <link rel="stylesheet" href="/bootstrap/dist/css/bootstrap.min.css">
+  <!-- 将监听放在前面,在dom加载时提前开启监听 -->
+  <script src="bundle.js"></script>
 </head>
 <body>
   <div class="content">welcome monitor</div>
-
+  <img id="img1" src="./img/1.png" alt="">
+  <button id="resourceBut">资源加载错误</button>
+  <button id="promiseBut">promise报错</button>
   <script src="/jquery/dist/jquery.min.js"></script>
-  <script src="bundle.js"></script>
   <script>
     $(document).ready(function() {
-      // console.log("jQuery is ready!")
+      $('#resourceBut').click(function() {
+        //测试 resource
+        $('#img1').attr('src', './img/2.png')
+        let x = xxx
+      })
+
+      $('#promiseBut').click(function() {
+         //测试 promise
+        new Promise((resove,reject)=>{
+          reject(Promise.resolve(123))
+        })
+      })
     })
   </script>
 </body>
