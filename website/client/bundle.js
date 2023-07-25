@@ -671,6 +671,53 @@
     return ErrorMonitor;
   }();
 
+  var ElementWhiteScreenMonitor = /*#__PURE__*/function () {
+    function ElementWhiteScreenMonitor(elementId, cb) {
+      _classCallCheck(this, ElementWhiteScreenMonitor);
+      this.elementId = elementId;
+      this.cb = cb;
+      this.WHITE_SCREEN_THRESHOLD = 3000; // 定义白屏阈值，单位为毫秒
+      this.startTime = Date.now();
+      this.checkElementWhiteScreen = this.checkElementWhiteScreen.bind(this);
+      window.addEventListener('load', this.checkElementWhiteScreen);
+    }
+    _createClass(ElementWhiteScreenMonitor, [{
+      key: "checkElementWhiteScreen",
+      value: function checkElementWhiteScreen() {
+        var element = document.getElementById(this.elementId);
+        if (element && element.offsetWidth > 0 && element.offsetHeight > 0) {
+          var elapsedTime = Date.now() - this.startTime;
+          if (elapsedTime >= this.WHITE_SCREEN_THRESHOLD) {
+            // 在这里执行你的白屏处理逻辑
+            this.cb({
+              message: '页面白屏了'
+            });
+          } else {
+            // 正常
+            this.cb({
+              message: '页面正常加载'
+            });
+          }
+        } else {
+          this.cb({
+            message: '顶级父元素请设置id为app'
+          });
+        }
+      }
+    }, {
+      key: "startMonitoring",
+      value: function startMonitoring() {
+        window.addEventListener('load', this.checkElementWhiteScreen);
+      }
+    }, {
+      key: "stopMonitoring",
+      value: function stopMonitoring() {
+        window.removeEventListener('load', this.checkElementWhiteScreen);
+      }
+    }]);
+    return ElementWhiteScreenMonitor;
+  }();
+
   var MyMonitor = /*#__PURE__*/function () {
     function MyMonitor(config) {
       _classCallCheck(this, MyMonitor);
@@ -681,7 +728,7 @@
       key: "init",
       value: function () {
         var _init = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-          var performanceFlag;
+          var performanceFlag, WhiteScreen;
           return _regeneratorRuntime().wrap(function _callee$(_context) {
             while (1) switch (_context.prev = _context.next) {
               case 0:
@@ -695,18 +742,30 @@
                 //xhr feach监控
                 if (this.config.rquestFlag) {
                   new RequestMonitor(function (data) {
-                    console.log(data);
+                    // console.log(data)
                   }).init();
                   //测试
                   // test()
                 }
 
+                //js错误监控
                 if (this.config.errorFlag) {
                   new ErrorMonitor(function (data) {
-                    console.log(data);
+                    // console.log(data)
                   }).init();
                 }
-              case 4:
+                //白屏监控
+                if (this.config.blankScreenFlag) {
+                  // 创建监控实例并传入需要监测的元素 ID
+                  WhiteScreen = new ElementWhiteScreenMonitor('app', function (data) {
+                    console.log(data);
+                  }); // 启动白屏监测
+                  WhiteScreen.startMonitoring();
+
+                  // 停止白屏监测
+                  // WhiteScreen.stopMonitoring();
+                }
+              case 5:
               case "end":
                 return _context.stop();
             }
@@ -723,7 +782,8 @@
   new MyMonitor({
     performanceFlag: true,
     rquestFlag: true,
-    errorFlag: true
+    errorFlag: true,
+    blankScreenFlag: true
   });
 
 }));

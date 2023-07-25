@@ -1,6 +1,7 @@
 import performance from "./performance";
 import requestmonitor from './requestmonitor'
 import ErrorMonitor from "./errormonitor";
+import ElementWhiteScreenMonitor from './blankscreen.js';
 
 class MyMonitor{
   constructor(config){
@@ -18,16 +19,30 @@ class MyMonitor{
     //xhr feach监控
     if(this.config.rquestFlag){
       new requestmonitor((data)=>{
-        console.log(data)
+        // console.log(data)
       }).init()
       //测试
       // test()
     }
 
+    //js错误监控
     if(this.config.errorFlag){
       new ErrorMonitor((data)=>{
-        console.log(data)
+        // console.log(data)
       }).init()
+    }
+    //白屏监控
+    if(this.config.blankScreenFlag){
+      // 创建监控实例并传入需要监测的元素 ID
+      const WhiteScreen = new ElementWhiteScreenMonitor('app',(data)=>{
+        console.log(data)
+      }); 
+
+      // 启动白屏监测
+      WhiteScreen.startMonitoring();
+
+      // 停止白屏监测
+      // WhiteScreen.stopMonitoring();
     }
   }
 }
@@ -45,4 +60,4 @@ const test = ()=>{
 }
 
 
-new MyMonitor({performanceFlag:true,rquestFlag: true,errorFlag: true})
+new MyMonitor({performanceFlag:true,rquestFlag: true,errorFlag: true,blankScreenFlag: true})
