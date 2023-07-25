@@ -9,6 +9,7 @@
     "koa-static": "^5.0.0"
   },
   "dependencies": {
-    "jquery": "^3.7.0"
+    "jquery": "^3.7.0",
+    "koa2-cors": "^2.0.6"
   }
 }
